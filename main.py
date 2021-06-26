@@ -8,58 +8,47 @@ win = Tk()
 keyboard = Controller()
 delay = StringVar() 
 
-global w 
+i = 0
+w = None
 
 class Worker(threading.Thread):
-    def __init__(self, name):
+    def __init__(self):
         threading.Thread.__init__(self)        
         self.stopThread = threading.Event() 
-        self.name = name        
         
     def run(self):        
         delayInt = int(delay.get())   
         while not self.stopThread.isSet():
             keyboard.press('c')
             keyboard.release('c')
-            time.sleep(delayInt)               
-    
-    def get_id(self):
-        # returns id of the respective thread
-        if hasattr(self, '_thread_id'):
-            return self._thread_id
-        for id, thread in threading._active.items():
-            if thread is self:
-                return id
-                
-    def raise_exception(self):
-        thread_id = self.get_id()
-        res = ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id,
-              ctypes.py_object(SystemExit))
-        if res > 1:
-            ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, 0)
-            print('Exception raise failure')
+            self.stopThread.wait(delayInt)
             
-    def stop(self):        
+    def stop(self):         
         self.stopThread.set()
        
 
      
-def startPressing():
-    w = Worker('KeyPress Thread')
+def startKeyPress(): 
+    global w
+    global submitButton
+    global stopButton
+    w = Worker()
     w.start()
     delayEntry.configure(state='disabled')
     submitButton.destroy()
-    stopButton.place(x=25, y=55)
+    stopButton = Button(text="Stop", command=stopKeyPress)
+    stopButton.place(x=55, y=55)
     win.update()
     
 
-def stopPressing():
-    #w.stop()
-    w.raise_exception()
-    w.join()
-    delayEntry.configure(state='normal')    
+def stopKeyPress():
+    global w
+    global submitButton
+    global stopButton
+    w.stop()
+    delayEntry.configure(state='normal')        
     stopButton.destroy()
-    submitButton = Button(text="Submit", command=startPressing)
+    submitButton = Button(text="Submit", command=startKeyPress)
     submitButton.place(x=25, y=55)
     win.update()
     
@@ -69,8 +58,8 @@ delayLabel = Label(win, text="Enter Delay (in sec):")
 
 delayEntry = Entry(win, textvariable=delay, width=20)
 
-submitButton = Button(text="Submit", command=startPressing)
-stopButton = Button(win, text="Stop", command=stopPressing)
+submitButton = Button(text="Submit", command=startKeyPress)
+stopButton = Button(text="Stop", command=stopKeyPress)
 
 delayLabel.place(x=25, y=25)
 delayEntry.place(x=140, y=25)
